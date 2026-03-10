@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voice Translation Suite</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600;700&family=Noto+Sans+KR:wght@300;400;700&family=Noto+Sans+JP:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #0c0c14;
+  --card:    #181826;
+  --border:  #2e2e48;
+  --border2: #3a3a58;
+  --text:    #f0f0ff;
+  --muted:   #9090b8;
+  --green:   #39ff9a;
+  --red:     #ff5580;
+  --blue:    #60aaff;
+  --yellow:  #ffe14d;
+  --jp:      #ff90c0;
+  --cn:      #ffaa55;
+  --en:      #55ddff;
+  --fr:      #a78bfa;
+  --sidebar: #101018;
+  --mono:    'IBM Plex Mono', monospace;
+  --sans:    'Noto Sans KR', sans-serif;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;display:flex;background-image:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,0.007) 2px,rgba(255,255,255,0.007) 4px);}
+
+/* ── SIDEBAR ── */
+.sidebar{width:224px;min-width:224px;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;position:sticky;top:0;height:100vh;overflow-y:auto;}
+.sb-logo{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:14px;}
+.sb-logo-icon{font-size:22px;margin-bottom:6px;}
+.sb-logo-title{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:2px;color:var(--text);text-transform:uppercase;}
+.sb-logo-sub{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:3px;}
+.sb-section{padding:8px 20px 4px;font-family:var(--mono);font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;}
+.sb-item{display:flex;align-items:center;gap:12px;padding:11px 20px;cursor:pointer;border-left:3px solid transparent;transition:all 0.18s;}
+.sb-item:hover{background:rgba(255,255,255,0.04);}
+.sb-item.active{background:rgba(255,255,255,0.06);border-left-color:var(--green);}
+.sb-item.active .sb-item-label{color:var(--text);}
+.sb-item-icon{font-size:17px;flex-shrink:0;}
+.sb-item-label{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--muted);letter-spacing:0.5px;transition:color 0.18s;}
+.sb-item-desc{font-family:var(--mono);font-size:9px;color:var(--muted);opacity:0.6;letter-spacing:0.5px;margin-top:1px;}
+.sb-badge{margin-left:auto;font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:99px;letter-spacing:1px;}
+.sb-badge.on{background:rgba(57,255,154,0.12);color:var(--green);border:1px solid rgba(57,255,154,0.2);}
+.sb-badge.new{background:rgba(255,85,128,0.12);color:var(--red);border:1px solid rgba(255,85,128,0.2);}
+.sb-divider{height:1px;background:var(--border);margin:10px 20px;}
+.sb-bottom{margin-top:auto;padding:16px 20px 0;border-top:1px solid var(--border);}
+.sb-clock{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:2px;}
+.sb-status{display:flex;align-items:center;gap:6px;margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:1px;}
+.sb-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:sdot 2s infinite;}
+@keyframes sdot{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* ── MAIN ── */
+.main{flex:1;padding:26px 26px;overflow-x:hidden;min-width:0;}
+.svc-panel{display:none;}
+.svc-panel.active{display:block;}
+
+/* ── PANEL HEADER ── */
+.panel-header{display:flex;align-items:center;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid var(--border);margin-bottom:18px;}
+.panel-title{font-family:var(--mono);font-size:20px;font-weight:700;letter-spacing:3px;color:var(--text);}
+.panel-sub{font-family:var(--mono);font-size:12px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.panel-sub span{color:var(--green);}
+.hright{display:flex;gap:12px;align-items:center;}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:2px;padding:5px 14px;border-radius:2px;border:1px solid;text-transform:uppercase;}
+.pill-green{border-color:var(--green);color:var(--green);background:rgba(57,255,154,0.08);}
+.pill-muted{border-color:var(--muted);color:var(--muted);}
+
+/* ── GRID ── */
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;}
+.row1{margin-bottom:16px;}
+
+/* ── CARD ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:20px 22px;position:relative;overflow:hidden;}
+.card-label{font-family:var(--mono);font-size:12px;letter-spacing:2px;color:var(--text);font-weight:600;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+.card-tag{font-family:var(--mono);font-size:10px;letter-spacing:1px;padding:3px 10px;border-radius:2px;background:rgba(255,255,255,0.06);border:1px solid var(--border2);color:var(--muted);}
+
+/* ── PIPELINE ── */
+.pipeline{display:flex;background:var(--card);border:1px solid var(--border);border-radius:4px;overflow:hidden;margin-bottom:16px;}
+.pipe-node{flex:1;padding:13px 11px;display:flex;align-items:center;gap:9px;border-right:1px solid var(--border);position:relative;transition:background 0.3s;}
+.pipe-node:last-child{border-right:none;}
+.pipe-node.active{background:rgba(57,255,154,0.08);}
+.pipe-node.active .pipe-dot{box-shadow:0 0 8px var(--green);}
+.pipe-node.active .pipe-name{color:var(--green);}
+.pipe-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:all 0.3s;}
+.pipe-name{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:1px;color:var(--text);transition:color 0.3s;text-transform:uppercase;}
+.pipe-desc{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px;}
+.pipe-arrow{position:absolute;right:-8px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--muted);z-index:2;pointer-events:none;}
+
+/* ── WAVEFORM ── */
+.waveform{display:flex;align-items:center;gap:2px;height:50px;padding:0 4px;}
+.wbar{flex:1;max-width:5px;border-radius:1px;background:var(--border2);transition:height 0.08s;min-height:2px;}
+.wbar.active{background:var(--green);}
+.wbar.speaking{background:var(--red);}
+
+/* ── METERS ── */
+.meter-row{display:flex;flex-direction:column;gap:5px;margin-bottom:10px;}
+.meter-top{display:flex;justify-content:space-between;align-items:baseline;}
+.meter-key{font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.meter-val{font-family:var(--mono);font-size:14px;font-weight:700;}
+.meter-track{height:5px;background:var(--border);border-radius:2px;overflow:hidden;}
+.meter-fill{height:100%;border-radius:2px;width:0%;transition:width 0.15s;}
+.meter-fill.prob{background:linear-gradient(90deg,var(--blue),var(--green));}
+.meter-fill.buf{background:linear-gradient(90deg,var(--blue),var(--yellow));}
+
+/* ── STATE BADGE ── */
+.state-badge{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:2px;padding:7px 14px;border-radius:2px;border:1px solid var(--muted);color:var(--muted);transition:all 0.3s;text-transform:uppercase;margin-top:8px;}
+.state-badge.speaking{border-color:var(--red);color:var(--red);background:rgba(255,85,128,0.1);box-shadow:0 0 14px rgba(255,85,128,0.2);}
+.state-dot{width:7px;height:7px;border-radius:50%;background:currentColor;}
+.state-dot.pulse{animation:blink 0.8s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+
+/* ── CONFIG ── */
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.cfg-item{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:3px;padding:10px 12px;}
+.cfg-key{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
+.cfg-val{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--yellow);}
+.slider-wrap{display:flex;flex-direction:column;gap:6px;margin-top:12px;}
+.slider-top{display:flex;justify-content:space-between;}
+.slider-key{font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.slider-val{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--yellow);}
+input[type=range]{-webkit-appearance:none;width:100%;height:5px;background:var(--border2);border-radius:2px;outline:none;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--yellow);cursor:pointer;box-shadow:0 0 6px rgba(255,225,77,0.4);}
+
+/* ── OUTPUT BOXES ── */
+.out-box{min-height:72px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:3px;padding:14px 16px;font-size:17px;line-height:1.8;}
+.out-box.ko{border-left:3px solid var(--blue);color:var(--text);}
+.out-box.ja{border-left:3px solid var(--jp);font-family:'Noto Sans JP',sans-serif;color:var(--jp);}
+.out-box.en{border-left:3px solid var(--en);color:var(--en);}
+.out-box.cn{border-left:3px solid var(--cn);color:var(--cn);}
+.out-box.fr{border-left:3px solid var(--fr);color:var(--fr);}
+.out-empty{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:1px;}
+
+/* ── TIMER ── */
+.timer-display{font-family:var(--mono);font-size:36px;font-weight:300;letter-spacing:4px;line-height:1;margin-bottom:6px;}
+.timer-display span{color:var(--green);}
+.timer-sub{font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+
+/* ── STATS ── */
+.stat-big{font-family:var(--mono);font-size:38px;font-weight:700;line-height:1;margin-bottom:5px;}
+.stat-big.green{color:var(--green);}
+.stat-big.red{color:var(--red);}
+.stat-sub2{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
+
+/* ── BUTTONS ── */
+.rec-btn{width:100%;padding:13px;background:none;border-radius:3px;font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px;}
+.rec-btn-green{border:1px solid var(--green);color:var(--green);}
+.rec-btn-green:hover{background:rgba(57,255,154,0.1);box-shadow:0 0 18px rgba(57,255,154,0.15);}
+.rec-btn-en{border:1px solid var(--en);color:var(--en);}
+.rec-btn-en:hover{background:rgba(85,221,255,0.1);box-shadow:0 0 18px rgba(85,221,255,0.12);}
+.rec-btn-fr{border:1px solid var(--fr);color:var(--fr);}
+.rec-btn-fr:hover{background:rgba(167,139,250,0.1);box-shadow:0 0 18px rgba(167,139,250,0.12);}
+.rec-btn-cn{border:1px solid var(--cn);color:var(--cn);}
+.rec-btn-cn:hover{background:rgba(255,170,85,0.1);box-shadow:0 0 18px rgba(255,170,85,0.12);}
+.rec-btn.running{border-color:var(--red)!important;color:var(--red)!important;background:rgba(255,85,128,0.08)!important;animation:rec-pulse 1.5s infinite;}
+@keyframes rec-pulse{0%,100%{box-shadow:0 0 0 rgba(255,85,128,0)}50%{box-shadow:0 0 20px rgba(255,85,128,0.25)}}
+
+/* ── TTS ── */
+.tts-row{display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap;}
+.tts-btn{display:flex;align-items:center;gap:8px;padding:9px 16px;background:none;border-radius:3px;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;border:1px solid;}
+.tts-btn:disabled{opacity:0.3;cursor:not-allowed;border-color:var(--muted)!important;color:var(--muted)!important;}
+.tts-speed-wrap{display:flex;align-items:center;gap:8px;}
+.tts-speed-label{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.tts-speed-val{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--yellow);min-width:28px;}
+.tts-wave{display:flex;align-items:center;gap:3px;height:20px;opacity:0;transition:opacity 0.3s;}
+.tts-wave.active{opacity:1;}
+.tts-wave span{display:block;width:3px;border-radius:2px;animation:tts-bar 0.8s ease-in-out infinite;}
+.tts-wave span:nth-child(1){height:4px;animation-delay:0s;}
+.tts-wave span:nth-child(2){height:12px;animation-delay:0.1s;}
+.tts-wave span:nth-child(3){height:18px;animation-delay:0.2s;}
+.tts-wave span:nth-child(4){height:12px;animation-delay:0.3s;}
+.tts-wave span:nth-child(5){height:4px;animation-delay:0.4s;}
+@keyframes tts-bar{0%,100%{transform:scaleY(0.4);opacity:0.6}50%{transform:scaleY(1);opacity:1}}
+
+/* ── LOG ── */
+.log-scroll{max-height:130px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border2) transparent;}
+.log-line{display:flex;gap:12px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-family:var(--mono);font-size:11px;line-height:1.6;}
+.log-ts{color:var(--muted);min-width:68px;flex-shrink:0;}
+.log-info{color:var(--text);}
+.log-ok{color:var(--green);}
+.log-warn{color:var(--yellow);}
+.log-err{color:var(--red);}
+
+/* ── HISTORY ── */
+.hist-list{display:flex;flex-direction:column;gap:10px;max-height:440px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border2) transparent;}
+.hist-item{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:4px;padding:14px 16px;}
+.hist-item:hover{border-color:var(--border2);}
+.hist-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:6px;}
+.hist-flag{font-size:16px;flex-shrink:0;margin-top:2px;}
+.hist-text{font-size:14px;line-height:1.6;flex:1;}
+.hist-text.ko-t{color:var(--text);}
+.hist-text.ja-t{color:var(--jp);font-family:'Noto Sans JP',sans-serif;}
+.hist-text.en-t{color:var(--en);}
+.hist-text.cn-t{color:var(--cn);}
+.hist-text.fr-t{color:var(--fr);}
+.hist-meta{display:flex;gap:10px;align-items:center;}
+.hist-time{font-family:var(--mono);font-size:10px;color:var(--muted);}
+.hist-lang-tag{font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:2px;background:rgba(255,255,255,0.05);border:1px solid var(--border2);color:var(--muted);}
+.hist-empty{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center;padding:40px 0;letter-spacing:2px;}
+.hist-clear-btn{background:none;border:1px solid var(--muted);color:var(--muted);font-family:var(--mono);font-size:11px;letter-spacing:2px;padding:6px 14px;border-radius:3px;cursor:pointer;transition:all 0.2s;text-transform:uppercase;}
+.hist-clear-btn:hover{border-color:var(--red);color:var(--red);}
+
+/* ── SETTINGS ── */
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);}
+.setting-row:last-child{border-bottom:none;}
+.setting-info{display:flex;flex-direction:column;gap:3px;}
+.setting-label{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text);letter-spacing:1px;}
+.setting-desc{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;}
+.toggle{position:relative;width:44px;height:24px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;inset:0;background:var(--border2);border-radius:12px;cursor:pointer;transition:0.3s;}
+.toggle-slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:var(--muted);border-radius:50%;transition:0.3s;}
+.toggle input:checked + .toggle-slider{background:rgba(57,255,154,0.25);border:1px solid var(--green);}
+.toggle input:checked + .toggle-slider:before{transform:translateX(20px);background:var(--green);}
+.select-input{background:var(--card);border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:12px;padding:6px 12px;border-radius:3px;cursor:pointer;outline:none;}
+
+/* ── HELP ── */
+.help-section{margin-bottom:20px;}
+.help-section-title{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--green);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.help-step{display:flex;gap:14px;align-items:flex-start;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+.help-step:last-child{border-bottom:none;}
+.help-num{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--green);min-width:26px;flex-shrink:0;background:rgba(57,255,154,0.1);border:1px solid rgba(57,255,154,0.2);border-radius:3px;text-align:center;padding:2px 0;}
+.help-text{font-family:var(--mono);font-size:12px;color:var(--text);line-height:1.7;letter-spacing:0.5px;}
+.help-text code{color:var(--yellow);background:rgba(255,225,77,0.08);padding:1px 6px;border-radius:2px;font-size:11px;}
+.pkg-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
+.pkg-item{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:3px;padding:10px 14px;font-family:var(--mono);font-size:11px;}
+.pkg-name{color:var(--yellow);margin-bottom:3px;}
+.pkg-cmd{color:var(--muted);font-size:10px;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.svc-panel.active>*{animation:fadeUp 0.3s ease both;}
+</style>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ══ -->
+<nav class="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-icon">🎙</div>
+    <div class="sb-logo-title">VoiceTrans</div>
+    <div class="sb-logo-sub">Voice Translation Suite</div>
+  </div>
+
+  <div class="sb-section">번역 서비스</div>
+
+  <div class="sb-item active" onclick="switchPanel('ja')" id="sb-ja">
+    <div class="sb-item-icon">🇯🇵</div>
+    <div><div class="sb-item-label">한→일 번역</div><div class="sb-item-desc">Korean → Japanese</div></div>
+    <div class="sb-badge on">ON</div>
+  </div>
+
+  <div class="sb-item" onclick="switchPanel('en')" id="sb-en">
+    <div class="sb-item-icon">🇺🇸</div>
+    <div><div class="sb-item-label">한→영 번역</div><div class="sb-item-desc">Korean → English</div></div>
+  </div>
+
+  <div class="sb-item" onclick="switchPanel('fr')" id="sb-fr">
+    <div class="sb-item-icon">🇫🇷</div>
+    <div><div class="sb-item-label">한→불 번역</div><div class="sb-item-desc">Korean → French</div></div>
+    <div class="sb-badge new">NEW</div>
+  </div>
+
+  <div class="sb-item" onclick="switchPanel('cn')" id="sb-cn">
+    <div class="sb-item-icon">🇨🇳</div>
+    <div><div class="sb-item-label">한→중 번역</div><div class="sb-item-desc">Korean → Chinese</div></div>
+  </div>
+
+  <div class="sb-divider"></div>
+  <div class="sb-section">기록 및 설정</div>
+
+  <div class="sb-item" onclick="switchPanel('history')" id="sb-history">
+    <div class="sb-item-icon">🗂</div>
+    <div><div class="sb-item-label">번역 히스토리</div><div class="sb-item-desc">Translation history</div></div>
+    <div class="sb-badge new" id="hist-badge" style="display:none">NEW</div>
+  </div>
+
+  <div class="sb-item" onclick="switchPanel('settings')" id="sb-settings">
+    <div class="sb-item-icon">⚙️</div>
+    <div><div class="sb-item-label">설정</div><div class="sb-item-desc">Settings</div></div>
+  </div>
+
+  <div class="sb-item" onclick="switchPanel('help')" id="sb-help">
+    <div class="sb-item-icon">📖</div>
+    <div><div class="sb-item-label">사용 가이드</div><div class="sb-item-desc">How to use</div></div>
+  </div>
+
+  <div class="sb-bottom">
+    <div class="sb-clock" id="sb-clock">--:--:--</div>
+    <div class="sb-status"><div class="sb-dot"></div>SYSTEM READY</div>
+  </div>
+</nav>
+
+<!-- ══ MAIN ══ -->
+<div class="main">
+
+<!-- ════ PANEL: 한→일 ════ -->
+<div class="svc-panel active" id="panel-ja">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">한국어 → 일본어</div>
+      <div class="panel-sub"><span>Silero VAD</span> · Google STT · deep_translator · ja</div>
+    </div>
+    <div class="hright">
+      <div class="pill pill-muted" id="ja-sys-time">--:--:--</div>
+      <div class="pill pill-green">● READY</div>
+    </div>
+  </div>
+  <!-- pipeline -->
+  <div class="pipeline">
+    <div class="pipe-node" id="ja-pn0"><div class="pipe-dot" style="background:var(--green)"></div><div><div class="pipe-name">마이크 입력</div><div class="pipe-desc">sounddevice·16kHz</div></div><div class="pipe-arrow">›</div></div>
+    <div class="pipe-node" id="ja-pn1"><div class="pipe-dot"></div><div><div class="pipe-name">VAD 감지</div><div class="pipe-desc">Silero·thr=0.6</div></div><div class="pipe-arrow">›</div></div>
+    <div class="pipe-node" id="ja-pn2"><div class="pipe-dot"></div><div><div class="pipe-name">WAV 저장</div><div class="pipe-desc">soundfile·float32</div></div><div class="pipe-arrow">›</div></div>
+    <div class="pipe-node" id="ja-pn3"><div class="pipe-dot"></div><div><div class="pipe-name">Google STT</div><div class="pipe-desc">ko-KR·energy=4000</div></div><div class="pipe-arrow">›</div></div>
+    <div class="pipe-node" id="ja-pn4"><div class="pipe-dot"></div><div><div class="pipe-name">번역 출력</div><div class="pipe-desc">deep_translator·ja</div></div></div>
+  </div>
+  <div class="row3">
+    <div class="card"><div class="card-label">Audio Waveform <span class="card-tag">16kHz·MONO</span></div><div class="waveform" id="ja-wf"></div></div>
+    <div class="card">
+      <div class="card-label">VAD Status <span class="card-tag">Block:512</span></div>
+      <div class="meter-row"><div class="meter-top"><span class="meter-key">Speech Prob</span><span class="meter-val" id="ja-vad-prob" style="color:var(--green)">0.00</span></div><div class="meter-track"><div class="meter-fill prob" id="ja-vad-bar"></div></div></div>
+      <div class="meter-row"><div class="meter-top"><span class="meter-key">Buffer</span><span class="meter-val" id="ja-buf-val" style="color:var(--blue)">0 samples</span></div><div class="meter-track"><div class="meter-fill buf" id="ja-buf-bar"></div></div></div>
+      <div class="state-badge" id="ja-state"><div class="state-dot" id="ja-sdot"></div><span id="ja-stxt">SILENCE</span></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Recording Timer</div>
+      <div class="timer-display"><span id="ja-tmm">00</span>:<span id="ja-tss">00</span></div>
+      <div class="timer-sub" id="ja-tsub">대기 중 · 10sec</div>
+      <div style="margin-top:12px;"><div class="meter-row"><div class="meter-top"><span class="meter-key">Progress</span><span class="meter-val" id="ja-pval" style="color:var(--text)">0%</span></div><div class="meter-track" style="height:6px;"><div class="meter-fill prob" id="ja-pbar" style="transition:width 1s linear;"></div></div></div></div>
+    </div>
+  </div>
+  <div class="row2">
+    <div class="card">
+      <div class="card-label">🇰🇷 한국어 인식 결과 <span class="card-tag">ko-KR</span></div>
+      <div class="out-box ko" id="ja-ko-out"><span class="out-empty">음성 인식 대기 중...</span></div>
+    </div>
+    <div class="card">
+      <div class="card-label">🇯🇵 일본어 번역 결과 <span class="card-tag" style="color:var(--jp);border-color:rgba(255,144,192,0.3)">deep_translator·ja</span></div>
+      <div class="out-box ja" id="ja-out"><span class="out-empty" style="font-family:var(--sans)">번역 대기 중...</span></div>
+      <div class="tts-row">
+        <button class="tts-btn" id="ja-tts-btn" style="border-color:var(--jp);color:var(--jp);" onclick="speakOut('ja-out','ja-JP','ja-tts-btn','ja-tts-icon','ja-tts-label','ja-tts-wave','ja-tts-spd')" disabled><span id="ja-tts-icon">▶</span><span id="ja-tts-label">일본어 듣기</span></button>
+        <div class="tts-speed-wrap"><span class="tts-speed-label">속도</span><input type="range" id="ja-tts-spd" min="0.5" max="1.5" step="0.1" value="1.0" style="width:70px;" oninput="document.getElementById('ja-tts-spd-val').textContent=parseFloat(this.value).toFixed(1)+'x'"><span class="tts-speed-val" id="ja-tts-spd-val">1.0x</span></div>
+        <div class="tts-wave" id="ja-tts-wave" style="--wc:var(--jp)"><span style="background:var(--jp)"></span><span style="background:var(--jp)"></span><span style="background:var(--jp)"></span><span style="background:var(--jp)"></span><span style="background:var(--jp)"></span></div>
+      </div>
+    </div>
+  </div>
+  <div class="row3">
+    <div class="card">
+      <div class="card-label">Configuration</div>
+      <div class="cfg-grid">
+        <div class="cfg-item"><div class="cfg-key">SAMPLE_RATE</div><div class="cfg-val">16,000</div></div>
+        <div class="cfg-item"><div class="cfg-key">BLOCK_SIZE</div><div class="cfg-val">512</div></div>
+        <div class="cfg-item"><div class="cfg-key">ENERGY_THR</div><div class="cfg-val">4,000</div></div>
+        <div class="cfg-item"><div class="cfg-key">DYN_ENERGY</div><div class="cfg-val">OFF</div></div>
+      </div>
+      <div class="slider-wrap"><div class="slider-top"><span class="slider-key">VAD Threshold</span><span class="slider-val" id="ja-thr-val">0.60</span></div><input type="range" min="0.3" max="0.9" step="0.05" value="0.6" oninput="document.getElementById('ja-thr-val').textContent=parseFloat(this.value).toFixed(2)"></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Session Stats</div>
+      <div style="display:flex;gap:18px;align-items:flex-end;">
+        <div><div class="stat-big green" id="ja-ok">0</div><div class="stat-sub2">번역 성공</div></div>
+        <div><div class="stat-big red" id="ja-err">0</div><div class="stat-sub2">인식 실패</div></div>
+        <div><div class="stat-big" id="ja-tot">0</div><div class="stat-sub2">총 시도</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Control</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:1px;line-height:2.2;">· 녹음 시작 후 한국어로 말하세요<br>· VAD가 음성 구간만 감지·저장<br>· Google STT → 일본어 번역 자동 실행</div>
+      <button class="rec-btn rec-btn-green" id="ja-rec-btn" onclick="startRec('ja')"><span id="ja-rec-icon">⬤</span><span id="ja-rec-label">녹음 시작</span></button>
+    </div>
+  </div>
+  <div class="card row1"><div class="card-label">System Log <span class="card-tag" id="ja-log-cnt">1 event</span></div><div class="log-scroll" id="ja-log"><div class="log-line"><span class="log-ts" id="ja-init-ts">--:--:--</span><span class="log-info">시스템 초기화 완료 · Silero VAD 로드됨 · energy_threshold=4000</span></div></div></div>
+</div>
+
+<!-- ════ PANEL: 한→영 ════ -->
+<div class="svc-panel" id="panel-en">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">한국어 → 영어</div>
+      <div class="panel-sub"><span>Silero VAD</span> · Google STT · deep_translator · en</div>
+    </div>
+    <div class="hright"><div class="pill" style="border-color:var(--en);color:var(--en);background:rgba(85,221,255,0.07)">● READY</div></div>
+  </div>
+  <div class="pipeline">
+    <div class="pipe-node" id="en-pn0"><div class="pipe-dot" style="background:var(--en)"></div><div><div class="pipe-name">마이크 입력</div><div class="pipe-desc">sounddevice·16kHz</div></div><div class="pipe-arrow">›</div></div>
+    <div class="pipe-node" id="en-pn1"><div class="pipe-dot"></div><div><div class="pipe-name">VAD 감지</div><div class="pipe-desc">Silero·thr=0.6</div></div><div class="pipe-arrow">›</div></div>
+    <div class="pipe-node" id="en-pn2"><div class="pipe-dot"></div><div><div class="pipe-name">WAV 저장</div><div class="pipe-desc">soundfile·float32</div></div><div class="pipe-arrow">›</div></div>
+    <div class="pipe-node" id="en-pn3"><div class="pipe-dot"></div><div><div class="pipe-name">Google STT</div><div class="pipe-desc">ko-KR·energy=4000</div></div><div class="pipe-arrow">›</div></div>
+    <div class="pipe-node" id="en-pn4"><div class="pipe-dot"></div><div><div class="pipe-name">번역 출력</div><div class="pipe-desc">deep_translator·en</div></div></div>
+  </div>
+  <div class="row3">
+    <div class="card"><div class="card-label">Audio Waveform <span class="card-tag">16kHz·MONO</span></div><div class="waveform" id="en-wf"></div></div>
+    <div class="card">
+      <div class="card-label">VAD Status <span class="card-tag">Block:512</span></div>
+      <div class="meter-row"><div class="meter-top"><span class="meter-key">Speech Prob</span><span class="meter-val" id="en-vad-prob" style="color:var(--green)">0.00</span></div><div class="meter-track"><div class="meter-fill prob" id="en-vad-bar"></div></div></div>
+      <div class="meter-row"><div class="meter-top"><span class="meter-key">Buffer</span><span class="meter-val" id="en-buf-val" style="color:var(--blue)">0 samples</span></div><div class="meter-track"><div class="meter-fill buf" id="en-buf-bar"></div></div></div>
+      <div class="state-badge" id="en-state"><div class="state-dot" id="en-sdot"></div><span id="en-stxt">SILENCE</span></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Recording Timer</div>
+      <div class="timer-display"><span id="en-tmm">00</span>:<span id="en-tss">00</span></div>
+      <div class="timer-sub" id="en-tsub">대기 중 · 10sec</div>
+      <div style="margin-top:12px;"><div class="meter-row"><div class="meter-top"><span class="meter-key">Progress</span><span class="meter-val" id="en-pval" style="color:var(--text)">0%</span></div><div class="meter-track" style="height:6px;"><div class="meter-fill prob" id="en-pbar" style="transition:width 1s linear;"></div></div></div></div>
+    </div>
+  </div>
+  <div class="row2">
+    <div class="card">
+      <div class="card-label">🇰🇷 한국어 인식 결과 <span class="card-tag">ko-KR</span></div>
+      <div class="out-box ko" id="en-ko-out"><span class="out-empty">음성 인식 대기 중...</span></div>
+    </div>
+    <div class="card">
+      <div class="card-label">🇺🇸 영어 번역 결과 <span class="card-tag" style="color:var(--en);border-color:rgba(85,221,255,0.3)">deep_translator·en</span></div>
+      <div class="out-box en" id="en-out"><span class="out-empty">번역 대기 중...</span></div>
+      <div class="tts-row">
+        <button class="tts-btn" id="en-tts-btn" style="border-color:var(--en);color:var(--en);" onclick="speakOut('en-out','en-US','en-tts-btn','en-tts-icon','en-tts-label','en-tts-wave','en-tts-spd')" disabled><span id="en-tts-icon">▶</span><span id="en-tts-label">영어 듣기</span></button>
+        <div class="tts-speed-wrap"><span class="tts-speed-label">속도</span><input type="range" id="en-tts-spd" min="0.5" max="1.5" step="0.1" value="1.0" style="width:70px;" oninput="document.getElementById('en-tts-spd-val').textContent=parseFloat(this.value).toFixed(1)+'x'"><span class="tts-speed-val" id="en-tts-spd-val">1.0x</span></div>
+        <div class="tts-wave" id="en-tts-wave"><span style="background:var(--en)"></span><span style="background:var(--en)"></span><span style="background:var(--en)"></span><span style="background:var(--en)"></span><span style="background:var(--en)"></span></div>
+      </div>
+    </div>
+  </div>
+  <div class="row3">
+    <div class="card">
+      <div class="card-label">Configuration</div>
+      <div class="cfg-grid">
+        <div class="cfg-item"><div class="cfg-key">SRC LANG</div><div class="cfg-val" style="color:var(--blue)">ko-KR</div></div>
+        <div class="cfg-item"><div class="cfg-key">DEST LANG</div><div class="cfg-val" style="color:var(--en)">en</div></div>
+        <div class="cfg-item"><div class="cfg-key">TTS LANG</div><div class="cfg-val" style="color:var(--en)">en-US</div></div>
+        <div class="cfg-item"><div class="cfg-key">ENGINE</div><div class="cfg-val">Google</div></div>
+      </div>
+      <div class="slider-wrap"><div class="slider-top"><span class="slider-key">VAD Threshold</span><span class="slider-val" id="en-thr-val">0.60</span></div><input type="range" min="0.3" max="0.9" step="0.05" value="0.6" oninput="document.getElementById('en-thr-val').textContent=parseFloat(this.value).toFixed(2)"></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Session Stats</div>
+      <div style="display:flex;gap:18px;align-items:flex-end;">
+        <div><div class="stat-big green" id="en-ok">0</div><div class="stat-sub2">번역 성공</div></div>
+        <div><div class="stat-big red" id="en-err">0</div><div class="stat-sub2">인식 실패</div></div>
+        <div><div class="stat-big" id="en-tot">0</div><div class="stat-sub2">총 시도</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Control</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:1px;line-height:2.2;">· 녹음 시작 후 한국어로 말하세요<br>· VAD가 음성 구간만 감지·저장<br>· Google STT → 영어 번역 자동 실행</div>
+      <button class="rec-btn rec-btn-en" id="en-rec-btn" onclick="startRec('en')"><span id="en-rec-icon">⬤</span><span id="en-rec-label">녹음 시작</span></button>
+    </div>
+  </div>
+  <div class="card row1"><div class="card-label">System Log <span class="card-tag" id="en-log-cnt">0 events</span></div><div class="log-scroll" id="en-log"></div></div>
+</div>
+
+<!-- ════ PANEL: 한→불 ════ -->
+<div class="svc-panel" id="panel-fr">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">한국어 → 불어</div>
+      <div class="panel-sub"><span>Silero VAD</span> · Google STT · deep_translator · fr</div>
+    </div>
+    <div class="hright"><div class="pill" style="border-color:var(--fr);color:var(--fr);background:rgba(167,139,250,0.07)">● READY</div></div>
+  </div>
+  <div class="pipeline">
+    <div class="pipe-node" id="fr-pn0"><div class="pipe-dot" style="background:var(--fr)"></div><div><div class="pipe-name">마이크 입력</div><div class="pipe-desc">sounddevice·16kHz</div></div><div class="pipe-arrow">›</div></div>
+    <div class="pipe-node" id="fr-pn1"><div class="pipe-dot"></div><div><div class="pipe-name">VAD 감지</div><div class="pipe-desc">Silero·thr=0.6</div></div><div class="pipe-arrow">›</div></div>
+    <div class="pipe-node" id="fr-pn2"><div class="pipe-dot"></div><div><div class="pipe-name">WAV 저장</div><div class="pipe-desc">soundfile·float32</div></div><div class="pipe-arrow">›</div></div>
+    <div class="pipe-node" id="fr-pn3"><div class="pipe-dot"></div><div><div class="pipe-name">Google STT</div><div class="pipe-desc">ko-KR·energy=4000</div></div><div class="pipe-arrow">›</div></div>
+    <div class="pipe-node" id="fr-pn4"><div class="pipe-dot"></div><div><div class="pipe-name">번역 출력</div><div class="pipe-desc">deep_translator·fr</div></div></div>
+  </div>
+  <div class="row3">
+    <div class="card"><div class="card-label">Audio Waveform <span class="card-tag">16kHz·MONO</span></div><div class="waveform" id="fr-wf"></div></div>
+    <div class="card">
+      <div class="card-label">VAD Status <span class="card-tag">Block:512</span></div>
+      <div class="meter-row"><div class="meter-top"><span class="meter-key">Speech Prob</span><span class="meter-val" id="fr-vad-prob" style="color:var(--green)">0.00</span></div><div class="meter-track"><div class="meter-fill prob" id="fr-vad-bar"></div></div></div>
+      <div class="meter-row"><div class="meter-top"><span class="meter-key">Buffer</span><span class="meter-val" id="fr-buf-val" style="color:var(--blue)">0 samples</span></div><div class="meter-track"><div class="meter-fill buf" id="fr-buf-bar"></div></div></div>
+      <div class="state-badge" id="fr-state"><div class="state-dot" id="fr-sdot"></div><span id="fr-stxt">SILENCE</span></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Recording Timer</div>
+      <div class="timer-display"><span id="fr-tmm">00</span>:<span id="fr-tss">00</span></div>
+      <div class="timer-sub" id="fr-tsub">대기 중 · 10sec</div>
+      <div style="margin-top:12px;"><div class="meter-row"><div class="meter-top"><span class="meter-key">Progress</span><span class="meter-val" id="fr-pval" style="color:var(--text)">0%</span></div><div class="meter-track" style="height:6px;"><div class="meter-fill prob" id="fr-pbar" style="transition:width 1s linear;"></div></div></div></div>
+    </div>
+  </div>
+  <div class="row2">
+    <div class="card">
+      <div class="card-label">🇰🇷 한국어 인식 결과 <span class="card-tag">ko-KR</span></div>
+      <div class="out-box ko" id="fr-ko-out"><span class="out-empty">음성 인식 대기 중...</span></div>
+    </div>
+    <div class="card">
+      <div class="card-label">🇫🇷 불어 번역 결과 <span class="card-tag" style="color:var(--fr);border-color:rgba(167,139,250,0.3)">deep_translator·fr</span></div>
+      <div class="out-box fr" id="fr-out"><span class="out-empty">번역 대기 중...</span></div>
+      <div class="tts-row">
+        <button class="tts-btn" id="fr-tts-btn" style="border-color:var(--fr);color:var(--fr);" onclick="speakOut('fr-out','fr-FR','fr-tts-btn','fr-tts-icon','fr-tts-label','fr-tts-wave','fr-tts-spd')" disabled><span id="fr-tts-icon">▶</span><span id="fr-tts-label">불어 듣기</span></button>
+        <div class="tts-speed-wrap"><span class="tts-speed-label">속도</span><input type="range" id="fr-tts-spd" min="0.5" max="1.5" step="0.1" value="1.0" style="width:70px;" oninput="document.getElementById('fr-tts-spd-val').textContent=parseFloat(this.value).toFixed(1)+'x'"><span class="tts-speed-val" id="fr-tts-spd-val">1.0x</span></div>
+        <div class="tts-wave" id="fr-tts-wave"><span style="background:var(--fr)"></span><span style="background:var(--fr)"></span><span style="background:var(--fr)"></span><span style="background:var(--fr)"></span><span style="background:var(--fr)"></span></div>
+      </div>
+    </div>
+  </div>
+  <div class="row3">
+    <div class="card">
+      <div class="card-label">Configuration</div>
+      <div class="cfg-grid">
+        <div class="cfg-item"><div class="cfg-key">SRC LANG</div><div class="cfg-val" style="color:var(--blue)">ko-KR</div></div>
+        <div class="cfg-item"><div class="cfg-key">DEST LANG</div><div class="cfg-val" style="color:var(--fr)">fr</div></div>
+        <div class="cfg-item"><div class="cfg-key">TTS LANG</div><div class="cfg-val" style="color:var(--fr)">fr-FR</div></div>
+        <div class="cfg-item"><div class="cfg-key">ENGINE</div><div class="cfg-val">Google</div></div>
+      </div>
+      <div class="slider-wrap"><div class="slider-top"><span class="slider-key">VAD Threshold</span><span class="slider-val" id="fr-thr-val">0.60</span></div><input type="range" min="0.3" max="0.9" step="0.05" value="0.6" oninput="document.getElementById('fr-thr-val').textContent=parseFloat(this.value).toFixed(2)"></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Session Stats</div>
+      <div style="display:flex;gap:18px;align-items:flex-end;">
+        <div><div class="stat-big green" id="fr-ok">0</div><div class="stat-sub2">번역 성공</div></div>
+        <div><div class="stat-big red" id="fr-err">0</div><div class="stat-sub2">인식 실패</div></div>
+        <div><div class="stat-big" id="fr-tot">0</div><div class="stat-sub2">총 시도</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Control</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:1px;line-height:2.2;">· 녹음 시작 후 한국어로 말하세요<br>· VAD가 음성 구간만 감지·저장<br>· Google STT → 불어 번역 자동 실행</div>
+      <button class="rec-btn rec-btn-fr" id="fr-rec-btn" onclick="startRec('fr')"><span id="fr-rec-icon">⬤</span><span id="fr-rec-label">녹음 시작</span></button>
+    </div>
+  </div>
+  <div class="card row1"><div class="card-label">System Log <span class="card-tag" id="fr-log-cnt">0 events</span></div><div class="log-scroll" id="fr-log"></div></div>
+</div>
+
+<!-- ════ PANEL: 한→중 ════ -->
+<div class="svc-panel" id="panel-cn">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">한국어 → 중국어</div>
+      <div class="panel-sub"><span>Silero VAD</span> · Google STT · deep_translator · zh-CN</div>
+    </div>
+    <div class="hright"><div class="pill" style="border-color:var(--cn);color:var(--cn);background:rgba(255,170,85,0.07)">● READY</div></div>
+  </div>
+  <div class="pipeline">
+    <div class="pipe-node" id="cn-pn0"><div class="pipe-dot" style="background:var(--cn)"></div><div><div class="pipe-name">마이크 입력</div><div class="pipe-desc">sounddevice·16kHz</div></div><div class="pipe-arrow">›</div></div>
+    <div class="pipe-node" id="cn-pn1"><div class="pipe-dot"></div><div><div class="pipe-name">VAD 감지</div><div class="pipe-desc">Silero·thr=0.6</div></div><div class="pipe-arrow">›</div></div>
+    <div class="pipe-node" id="cn-pn2"><div class="pipe-dot"></div><div><div class="pipe-name">WAV 저장</div><div class="pipe-desc">soundfile·float32</div></div><div class="pipe-arrow">›</div></div>
+    <div class="pipe-node" id="cn-pn3"><div class="pipe-dot"></div><div><div class="pipe-name">Google STT</div><div class="pipe-desc">ko-KR·energy=4000</div></div><div class="pipe-arrow">›</div></div>
+    <div class="pipe-node" id="cn-pn4"><div class="pipe-dot"></div><div><div class="pipe-name">번역 출력</div><div class="pipe-desc">deep_translator·zh-CN</div></div></div>
+  </div>
+  <div class="row3">
+    <div class="card"><div class="card-label">Audio Waveform <span class="card-tag">16kHz·MONO</span></div><div class="waveform" id="cn-wf"></div></div>
+    <div class="card">
+      <div class="card-label">VAD Status <span class="card-tag">Block:512</span></div>
+      <div class="meter-row"><div class="meter-top"><span class="meter-key">Speech Prob</span><span class="meter-val" id="cn-vad-prob" style="color:var(--green)">0.00</span></div><div class="meter-track"><div class="meter-fill prob" id="cn-vad-bar"></div></div></div>
+      <div class="meter-row"><div class="meter-top"><span class="meter-key">Buffer</span><span class="meter-val" id="cn-buf-val" style="color:var(--blue)">0 samples</span></div><div class="meter-track"><div class="meter-fill buf" id="cn-buf-bar"></div></div></div>
+      <div class="state-badge" id="cn-state"><div class="state-dot" id="cn-sdot"></div><span id="cn-stxt">SILENCE</span></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Recording Timer</div>
+      <div class="timer-display"><span id="cn-tmm">00</span>:<span id="cn-tss">00</span></div>
+      <div class="timer-sub" id="cn-tsub">대기 중 · 10sec</div>
+      <div style="margin-top:12px;"><div class="meter-row"><div class="meter-top"><span class="meter-key">Progress</span><span class="meter-val" id="cn-pval" style="color:var(--text)">0%</span></div><div class="meter-track" style="height:6px;"><div class="meter-fill prob" id="cn-pbar" style="transition:width 1s linear;"></div></div></div></div>
+    </div>
+  </div>
+  <div class="row2">
+    <div class="card">
+      <div class="card-label">🇰🇷 한국어 인식 결과 <span class="card-tag">ko-KR</span></div>
+      <div class="out-box ko" id="cn-ko-out"><span class="out-empty">음성 인식 대기 중...</span></div>
+    </div>
+    <div class="card">
+      <div class="card-label">🇨🇳 중국어 번역 결과 <span class="card-tag" style="color:var(--cn);border-color:rgba(255,170,85,0.3)">deep_translator·zh-CN</span></div>
+      <div class="out-box cn" id="cn-out"><span class="out-empty">번역 대기 중...</span></div>
+      <div class="tts-row">
+        <button class="tts-btn" id="cn-tts-btn" style="border-color:var(--cn);color:var(--cn);" onclick="speakOut('cn-out','zh-CN','cn-tts-btn','cn-tts-icon','cn-tts-label','cn-tts-wave','cn-tts-spd')" disabled><span id="cn-tts-icon">▶</span><span id="cn-tts-label">중국어 듣기</span></button>
+        <div class="tts-speed-wrap"><span class="tts-speed-label">속도</span><input type="range" id="cn-tts-spd" min="0.5" max="1.5" step="0.1" value="1.0" style="width:70px;" oninput="document.getElementById('cn-tts-spd-val').textContent=parseFloat(this.value).toFixed(1)+'x'"><span class="tts-speed-val" id="cn-tts-spd-val">1.0x</span></div>
+        <div class="tts-wave" id="cn-tts-wave"><span style="background:var(--cn)"></span><span style="background:var(--cn)"></span><span style="background:var(--cn)"></span><span style="background:var(--cn)"></span><span style="background:var(--cn)"></span></div>
+      </div>
+    </div>
+  </div>
+  <div class="row3">
+    <div class="card">
+      <div class="card-label">Configuration</div>
+      <div class="cfg-grid">
+        <div class="cfg-item"><div class="cfg-key">SRC LANG</div><div class="cfg-val" style="color:var(--blue)">ko-KR</div></div>
+        <div class="cfg-item"><div class="cfg-key">DEST LANG</div><div class="cfg-val" style="color:var(--cn)">zh-CN</div></div>
+        <div class="cfg-item"><div class="cfg-key">TTS LANG</div><div class="cfg-val" style="color:var(--cn)">zh-CN</div></div>
+        <div class="cfg-item"><div class="cfg-key">ENGINE</div><div class="cfg-val">Google</div></div>
+      </div>
+      <div class="slider-wrap"><div class="slider-top"><span class="slider-key">VAD Threshold</span><span class="slider-val" id="cn-thr-val">0.60</span></div><input type="range" min="0.3" max="0.9" step="0.05" value="0.6" oninput="document.getElementById('cn-thr-val').textContent=parseFloat(this.value).toFixed(2)"></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Session Stats</div>
+      <div style="display:flex;gap:18px;align-items:flex-end;">
+        <div><div class="stat-big green" id="cn-ok">0</div><div class="stat-sub2">번역 성공</div></div>
+        <div><div class="stat-big red" id="cn-err">0</div><div class="stat-sub2">인식 실패</div></div>
+        <div><div class="stat-big" id="cn-tot">0</div><div class="stat-sub2">총 시도</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Control</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:1px;line-height:2.2;">· 녹음 시작 후 한국어로 말하세요<br>· VAD가 음성 구간만 감지·저장<br>· Google STT → 중국어 번역 자동 실행</div>
+      <button class="rec-btn rec-btn-cn" id="cn-rec-btn" onclick="startRec('cn')"><span id="cn-rec-icon">⬤</span><span id="cn-rec-label">녹음 시작</span></button>
+    </div>
+  </div>
+  <div class="card row1"><div class="card-label">System Log <span class="card-tag" id="cn-log-cnt">0 events</span></div><div class="log-scroll" id="cn-log"></div></div>
+</div>
+
+<!-- ════ PANEL: 히스토리 ════ -->
+<div class="svc-panel" id="panel-history">
+  <div class="panel-header">
+    <div><div class="panel-title">번역 히스토리</div><div class="panel-sub">모든 번역 서비스 결과가 자동 저장됩니다</div></div>
+    <button class="hist-clear-btn" onclick="clearHistory()">전체 삭제</button>
+  </div>
+  <div class="card"><div class="hist-list" id="hist-list"><div class="hist-empty" id="hist-empty">아직 번역 기록이 없습니다<br><br>번역 서비스를 사용하면 자동으로 저장됩니다</div></div></div>
+</div>
+
+<!-- ════ PANEL: 설정 ════ -->
+<div class="svc-panel" id="panel-settings">
+  <div class="panel-header"><div><div class="panel-title">설정</div><div class="panel-sub">서비스 환경을 커스터마이즈하세요</div></div></div>
+  <div class="row2">
+    <div class="card"><div class="card-label">오디오 설정</div>
+      <div class="setting-row"><div class="setting-info"><div class="setting-label">샘플레이트</div><div class="setting-desc">마이크 입력 주파수</div></div><select class="select-input"><option>16,000 Hz</option><option>44,100 Hz</option></select></div>
+      <div class="setting-row"><div class="setting-info"><div class="setting-label">Dynamic Energy</div><div class="setting-desc">자동 임계값 조정</div></div><label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label></div>
+      <div class="setting-row"><div class="setting-info"><div class="setting-label">노이즈 캔슬링</div><div class="setting-desc">배경 소음 제거</div></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+    </div>
+    <div class="card"><div class="card-label">번역 설정</div>
+      <div class="setting-row"><div class="setting-info"><div class="setting-label">기본 번역 언어</div><div class="setting-desc">사이드바 기본 선택</div></div><select class="select-input"><option>🇯🇵 일본어</option><option>🇺🇸 영어</option><option>🇫🇷 불어</option><option>🇨🇳 중국어</option></select></div>
+      <div class="setting-row"><div class="setting-info"><div class="setting-label">자동 TTS 재생</div><div class="setting-desc">번역 완료 시 자동 재생</div></div><label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label></div>
+      <div class="setting-row"><div class="setting-info"><div class="setting-label">히스토리 자동 저장</div><div class="setting-desc">번역 결과 자동 기록</div></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ PANEL: 가이드 ════ -->
+<div class="svc-panel" id="panel-help">
+  <div class="panel-header"><div><div class="panel-title">사용 가이드</div><div class="panel-sub">Voice Translation Suite 사용 방법</div></div></div>
+  <div class="row2">
+    <div class="card">
+      <div class="help-section"><div class="help-section-title">📋 사용 방법</div>
+        <div class="help-step"><div class="help-num">01</div><div class="help-text">왼쪽 사이드바에서 번역 언어를 선택합니다. 🇯🇵 일본어 / 🇺🇸 영어 / 🇫🇷 불어 / 🇨🇳 중국어</div></div>
+        <div class="help-step"><div class="help-num">02</div><div class="help-text"><code>녹음 시작</code> 버튼 클릭 → Silero VAD가 실시간 음성 구간을 감지합니다.</div></div>
+        <div class="help-step"><div class="help-num">03</div><div class="help-text">한국어로 말하면 VAD가 <code>speech_start</code>를 감지하고 자동 버퍼링이 시작됩니다.</div></div>
+        <div class="help-step"><div class="help-num">04</div><div class="help-text">말을 멈추면 <code>speech_end</code>를 감지하고 Google STT로 한국어 텍스트를 추출합니다.</div></div>
+        <div class="help-step"><div class="help-num">05</div><div class="help-text">deep_translator가 선택 언어로 번역하고, <code>▶ 듣기</code> 버튼으로 TTS 음성을 재생합니다.</div></div>
+        <div class="help-step"><div class="help-num">06</div><div class="help-text">결과는 <code>🗂 히스토리</code>에 자동 저장됩니다.</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="help-section"><div class="help-section-title">⚙️ 패키지 설치</div>
+        <div class="pkg-grid">
+          <div class="pkg-item"><div class="pkg-name">torch</div><div class="pkg-cmd">pip install torch</div></div>
+          <div class="pkg-item"><div class="pkg-name">sounddevice</div><div class="pkg-cmd">pip install sounddevice</div></div>
+          <div class="pkg-item"><div class="pkg-name">soundfile</div><div class="pkg-cmd">pip install soundfile</div></div>
+          <div class="pkg-item"><div class="pkg-name">SpeechRecognition</div><div class="pkg-cmd">pip install SpeechRecognition</div></div>
+          <div class="pkg-item"><div class="pkg-name">deep-translator</div><div class="pkg-cmd">pip install deep-translator</div></div>
+          <div class="pkg-item"><div class="pkg-name">silero-vad</div><div class="pkg-cmd">torch.hub.load</div></div>
+        </div>
+      </div>
+      <div class="help-section" style="margin-top:16px;"><div class="help-section-title">🔧 오류 해결</div>
+        <div class="help-step"><div class="help-num">Q</div><div class="help-text">음성이 인식 안 됨 → <code>energy_threshold</code>를 낮추거나 마이크 볼륨을 높이세요.</div></div>
+        <div class="help-step"><div class="help-num">Q</div><div class="help-text">다른 말이 붙어 인식됨 → <code>threshold=0.7</code>로 VAD 감도를 높이세요.</div></div>
+        <div class="help-step"><div class="help-num">Q</div><div class="help-text">TTS 재생 안 됨 → 브라우저 오디오 권한을 허용했는지 확인하세요.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ── 설정 ──
+const LANG_CFG = {
+  ja: { dest:'ja', ttsLang:'ja-JP', label:'일본어', flag:'🇯🇵', histCls:'ja-t' },
+  en: { dest:'en', ttsLang:'en-US', label:'영어',   flag:'🇺🇸', histCls:'en-t' },
+  fr: { dest:'fr', ttsLang:'fr-FR', label:'불어',   flag:'🇫🇷', histCls:'fr-t' },
+  cn: { dest:'zh-CN', ttsLang:'zh-CN', label:'중국어', flag:'🇨🇳', histCls:'cn-t' },
+};
+const SAMPLES = ['안녕하세요','감사합니다','잘 부탁드립니다','반갑습니다','좋은 하루 되세요','어디에 가세요','배가 고파요','날씨가 좋네요','오늘도 수고하셨습니다','만나서 반가워요'];
+const sampleIdx = { ja:0, en:0, fr:0, cn:0 };
+const running = { ja:false, en:false, fr:false, cn:false };
+
+// ── Clock ──
+function tick() {
+  const t = new Date().toTimeString().split(' ')[0];
+  ['ja-sys-time','sb-clock','ja-init-ts'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = t; });
+}
+tick(); setInterval(tick, 1000);
+
+// ── Sidebar ──
+function switchPanel(id) {
+  document.querySelectorAll('.svc-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  document.getElementById('sb-' + id).classList.add('active');
+  if (id === 'history') document.getElementById('hist-badge').style.display = 'none';
+}
+
+// ── Waveform init ──
+['ja','en','fr','cn'].forEach(lang => {
+  const wf = document.getElementById(lang + '-wf');
+  for (let i = 0; i < 40; i++) {
+    const b = document.createElement('div'); b.className = 'wbar'; b.style.height = '2px'; wf.appendChild(b);
+  }
+});
+
+const wfInts = {};
+function animateWF(lang, speaking) {
+  const wf = document.getElementById(lang + '-wf');
+  if (!wf) return;
+  wf.querySelectorAll('.wbar').forEach(b => {
+    b.style.height = (speaking ? Math.random()*42+4 : Math.random()*7+2) + 'px';
+    b.className = 'wbar ' + (speaking ? 'speaking' : 'active');
+  });
+}
+function stopWF(lang) {
+  if (wfInts[lang]) { clearInterval(wfInts[lang]); wfInts[lang] = null; }
+  const wf = document.getElementById(lang + '-wf');
+  if (wf) wf.querySelectorAll('.wbar').forEach(b => { b.style.height='2px'; b.className='wbar'; });
+}
+
+// ── Pipeline ──
+function setStep(lang, i) {
+  for (let j = 0; j < 5; j++) {
+    const el = document.getElementById(lang + '-pn' + j);
+    if (el) {
+      el.classList.toggle('active', j === i);
+      const dot = el.querySelector('.pipe-dot');
+      if (dot) dot.style.background = j === i ? 'var(--green)' : '';
+    }
+  }
+}
+
+// ── State badge ──
+function setState(lang, speaking) {
+  const badge = document.getElementById(lang + '-state');
+  if (!badge) return;
+  badge.className = 'state-badge' + (speaking ? ' speaking' : '');
+  document.getElementById(lang + '-sdot').className = 'state-dot' + (speaking ? ' pulse' : '');
+  document.getElementById(lang + '-stxt').textContent = speaking ? 'SPEAKING' : 'SILENCE';
+}
+
+// ── Log ──
+function addLog(lang, msg, type='info') {
+  const t = new Date().toTimeString().split(' ')[0];
+  const area = document.getElementById(lang + '-log');
+  if (!area) return;
+  const d = document.createElement('div');
+  d.className = 'log-line';
+  d.innerHTML = `<span class="log-ts">${t}</span><span class="log-${type}">${msg}</span>`;
+  area.appendChild(d); area.scrollTop = area.scrollHeight;
+  const cnt = document.getElementById(lang + '-log-cnt');
+  if (cnt) cnt.textContent = (parseInt(cnt.textContent||'0') + 1) + ' events';
+}
+
+// ── History ──
+const histData = [];
+function addHistory(ko, translated, lang) {
+  const cfg = LANG_CFG[lang];
+  const t = new Date().toTimeString().split(' ')[0];
+  histData.unshift({ ko, translated, lang, flag: cfg.flag, cls: cfg.histCls, label: `ko → ${cfg.dest}`, time: t });
+  renderHistory();
+  document.getElementById('hist-badge').style.display = '';
+}
+function renderHistory() {
+  const list = document.getElementById('hist-list');
+  const empty = document.getElementById('hist-empty');
+  if (!histData.length) { list.innerHTML = ''; list.appendChild(empty); empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  list.innerHTML = '';
+  histData.forEach(h => {
+    const div = document.createElement('div'); div.className = 'hist-item';
+    div.innerHTML = `<div class="hist-row"><div class="hist-flag">🇰🇷</div><div class="hist-text ko-t">${h.ko}</div></div><div class="hist-row"><div class="hist-flag">${h.flag}</div><div class="hist-text ${h.cls}">${h.translated}</div></div><div class="hist-meta"><span class="hist-time">${h.time}</span><span class="hist-lang-tag">${h.label}</span></div>`;
+    list.appendChild(div);
+  });
+}
+function clearHistory() { histData.length = 0; renderHistory(); document.getElementById('hist-badge').style.display = 'none'; }
+
+// ── Claude API translate ──
+async function callTranslate(text, destLang) {
+  const labels = { ja:'일본어', en:'영어', fr:'프랑스어', 'zh-CN':'중국어 간체' };
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({
+      model:"claude-sonnet-4-20250514", max_tokens:1000,
+      messages:[{ role:"user", content:`아래 한국어를 ${labels[destLang]}로만 번역해줘. 번역된 텍스트만 출력하고 설명은 하지 마.\n\n${text}` }]
+    })
+  });
+  const data = await res.json();
+  return data.content[0].text.trim();
+}
+
+// ── TTS ──
+let currentUtt = null;
+function speakOut(outId, ttsLang, btnId, iconId, labelId, waveId, spdId) {
+  const text = document.getElementById(outId).textContent.trim();
+  if (!text || document.getElementById(outId).querySelector('.out-empty')) return;
+  const btn = document.getElementById(btnId);
+  const icon = document.getElementById(iconId);
+  const label = document.getElementById(labelId);
+  const wave = document.getElementById(waveId);
+  const speed = parseFloat(document.getElementById(spdId).value);
+  const labelMap = { 'ja-JP':'일본어 듣기', 'en-US':'영어 듣기', 'fr-FR':'불어 듣기', 'zh-CN':'중국어 듣기' };
+  if (currentUtt && speechSynthesis.speaking) { speechSynthesis.cancel(); return; }
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = ttsLang; utter.rate = speed; utter.pitch = 1.0;
+  const voices = speechSynthesis.getVoices();
+  const v = voices.find(v => v.lang === ttsLang) || voices.find(v => v.lang.startsWith(ttsLang.split('-')[0]));
+  if (v) utter.voice = v;
+  utter.onstart = () => { currentUtt = utter; btn.classList.add('playing'); icon.textContent='■'; label.textContent='재생 중지'; wave.classList.add('active'); };
+  utter.onend = utter.onerror = () => { currentUtt = null; btn.classList.remove('playing'); icon.textContent='▶'; label.textContent=labelMap[ttsLang]||'듣기'; wave.classList.remove('active'); };
+  speechSynthesis.speak(utter);
+}
+
+// ── Main recording simulation ──
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function startRec(lang) {
+  if (running[lang]) return;
+  running[lang] = true;
+  const cfg = LANG_CFG[lang];
+  const koText = SAMPLES[sampleIdx[lang] % SAMPLES.length]; sampleIdx[lang]++;
+
+  // Reset UI
+  document.getElementById(lang + '-ko-out').innerHTML = '<span class="out-empty">인식 중...</span>';
+  document.getElementById(lang + '-out').innerHTML = `<span class="out-empty">번역 대기 중...</span>`;
+  document.getElementById(lang + '-tts-btn').disabled = true;
+  document.getElementById(lang + '-tts-icon').textContent = '▶';
+  const ttsLabels = { ja:'일본어 듣기', en:'영어 듣기', fr:'불어 듣기', cn:'중국어 듣기' };
+  document.getElementById(lang + '-tts-label').textContent = ttsLabels[lang];
+  document.getElementById(lang + '-tts-wave').classList.remove('active');
+  if (speechSynthesis.speaking) speechSynthesis.cancel();
+  const recBtn = document.getElementById(lang + '-rec-btn');
+  recBtn.classList.add('running');
+  document.getElementById(lang + '-rec-icon').textContent = '■';
+  document.getElementById(lang + '-rec-label').textContent = '녹음 중...';
+  document.getElementById(lang + '-tsub').textContent = '녹음 진행 중';
+  document.getElementById(lang + '-pbar').style.width = '0%'; document.getElementById(lang + '-pval').textContent = '0%';
+  document.getElementById(lang + '-tmm').textContent = '00'; document.getElementById(lang + '-tss').textContent = '00';
+  document.getElementById(lang + '-ok').textContent || (document.getElementById(lang + '-tot').textContent = String(parseInt(document.getElementById(lang+'-tot').textContent||'0')+1));
+  const tot = document.getElementById(lang + '-tot');
+  tot.textContent = String(parseInt(tot.textContent||'0') + 1);
+
+  // Phase 1 — mic
+  setStep(lang, 0);
+  wfInts[lang] = setInterval(() => animateWF(lang, false), 150);
+  addLog(lang, '🎙️ 녹음 시작 — sd.InputStream(16kHz, BLOCK=512)', 'info');
+
+  let elapsed = 0;
+  const ticker = setInterval(() => {
+    elapsed++;
+    document.getElementById(lang+'-tmm').textContent = String(Math.floor(elapsed/60)).padStart(2,'0');
+    document.getElementById(lang+'-tss').textContent = String(elapsed%60).padStart(2,'0');
+    const pct = Math.min(100, elapsed/10*100);
+    document.getElementById(lang+'-pbar').style.width = pct + '%';
+    document.getElementById(lang+'-pval').textContent = Math.round(pct) + '%';
+  }, 1000);
+
+  // Phase 2 — VAD
+  await wait(1000); setStep(lang, 1);
+  addLog(lang, '📡 VAD 감지 시작 — threshold=0.60, min_silence=800ms', 'info');
+  clearInterval(wfInts[lang]); wfInts[lang] = setInterval(() => animateWF(lang, false), 150);
+  await wait(700);
+
+  // Phase 3 — speaking
+  setState(lang, true);
+  clearInterval(wfInts[lang]); wfInts[lang] = setInterval(() => animateWF(lang, true), 80);
+  addLog(lang, '🔊 speech_start → is_speaking = True', 'ok');
+  let buf = 0;
+  const vadInt = setInterval(() => {
+    const prob = Math.min(0.97, 0.6 + Math.random()*0.35);
+    document.getElementById(lang+'-vad-prob').textContent = prob.toFixed(2);
+    document.getElementById(lang+'-vad-bar').style.width = (prob*100)+'%';
+    buf += 512;
+    document.getElementById(lang+'-buf-val').textContent = buf.toLocaleString() + ' samples';
+    document.getElementById(lang+'-buf-bar').style.width = Math.min(100, buf/1600)+'%';
+  }, 200);
+  await wait(2200); clearInterval(vadInt);
+
+  // Phase 4 — speech end
+  setState(lang, false);
+  clearInterval(wfInts[lang]); wfInts[lang] = setInterval(() => animateWF(lang, false), 200);
+  document.getElementById(lang+'-vad-prob').textContent = '0.08';
+  document.getElementById(lang+'-vad-bar').style.width = '8%';
+  addLog(lang, '🔇 speech_end → is_speaking = False', 'warn');
+  await wait(700);
+
+  // Phase 5 — WAV
+  setStep(lang, 2); addLog(lang, '💾 vad_recorded.wav 저장 중...', 'info'); await wait(500); addLog(lang, '✅ 저장 완료', 'ok');
+
+  // Phase 6 — STT
+  setStep(lang, 3); addLog(lang, '🔄 Google STT 호출 — ko-KR', 'info'); await wait(1200);
+  document.getElementById(lang+'-ko-out').textContent = koText;
+  addLog(lang, `✅ STT 완료 → "${koText}"`, 'ok');
+
+  // Phase 7 — translate
+  setStep(lang, 4); addLog(lang, `🌐 deep_translator (ko → ${cfg.dest}) 호출`, 'info');
+  try {
+    const translated = await callTranslate(koText, cfg.dest);
+    document.getElementById(lang+'-out').textContent = translated;
+    addLog(lang, `${cfg.flag} 번역 완료 → "${translated}"`, 'ok');
+    document.getElementById(lang+'-tts-btn').disabled = false;
+    addHistory(koText, translated, lang);
+    const okEl = document.getElementById(lang+'-ok');
+    okEl.textContent = String(parseInt(okEl.textContent||'0') + 1);
+  } catch(e) {
+    document.getElementById(lang+'-out').innerHTML = '<span style="color:var(--red)">번역 오류</span>';
+    addLog(lang, '❌ 오류: ' + e.message, 'err');
+    const errEl = document.getElementById(lang+'-err');
+    errEl.textContent = String(parseInt(errEl.textContent||'0') + 1);
+  }
+
+  // Done
+  clearInterval(ticker); stopWF(lang); setStep(lang, -1);
+  document.getElementById(lang+'-pbar').style.width = '100%';
+  document.getElementById(lang+'-pval').textContent = '100%';
+  document.getElementById(lang+'-tsub').textContent = '녹음 완료';
+  recBtn.classList.remove('running');
+  document.getElementById(lang+'-rec-icon').textContent = '⬤';
+  document.getElementById(lang+'-rec-label').textContent = '다시 녹음';
+  addLog(lang, '─────────────────────────────', 'info');
+  running[lang] = false;
+}
+</script>
+</body>
+</html>
