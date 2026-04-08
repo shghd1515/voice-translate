@@ -1,0 +1,13 @@
+silero-vad
+sounddevice
+soundfile
+torch
+torchaudio
+SpeechRecognition
+gTTS
+groq
+python-dotenv
+pydub
+streamlit
+streamlit-webrtc 
+av
